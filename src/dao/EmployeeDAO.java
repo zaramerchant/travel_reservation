@@ -5,22 +5,25 @@ import java.sql.*;
 
 public class EmployeeDAO {
 
-    public static void addEmployee(String firstName, String lastName, String email, String role) {
-        String query = "INSERT INTO Employee (first_name, last_name, email, role) VALUES (?, ?, ?, ?)";
-
+    public static void addEmployee(String firstName, String lastName, String email, String role, String password) {
+        String query = "INSERT INTO Employee (first_name, last_name, email, role, password) VALUES (?, ?, ?, ?, ?)";
+    
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
-
+    
             ps.setString(1, firstName);
             ps.setString(2, lastName);
             ps.setString(3, email);
             ps.setString(4, role);
+            ps.setString(5, password);
+    
             ps.executeUpdate();
             System.out.println("Employee added successfully.");
-
-        } catch (Exception e) {
+    
+        } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
     }
 
     public static void getAllEmployees() {

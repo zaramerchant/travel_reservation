@@ -34,7 +34,8 @@ CREATE TABLE Employee (
     first_name VARCHAR(50),
     last_name VARCHAR(50),
     email VARCHAR(100),
-    role VARCHAR(50)
+    role VARCHAR(50),
+    password VARCHAR(100)
 );
 
 CREATE TABLE Flight (
@@ -44,6 +45,7 @@ CREATE TABLE Flight (
     arrival_airport VARCHAR(3),
     departure_time DATETIME,
     arrival_time DATETIME,
+    base_price DECIMAL(10,2),
     FOREIGN KEY (airline_id) REFERENCES Airline(airline_id),
     FOREIGN KEY (departure_airport) REFERENCES Airport(airport_id),
     FOREIGN KEY (arrival_airport) REFERENCES Airport(airport_id)
@@ -115,24 +117,24 @@ INSERT INTO Customer (first_name, last_name, email, password) VALUES
 ('Jordan', 'Lee', 'jordan@gmail.com', 'pass123'),
 ('Nina', 'Brown', 'nina@gmail.com', 'pass123');
 
-INSERT INTO Employee (first_name, last_name, email, role) VALUES
-('John', 'Admin', 'admin@travel.com', 'admin'),
-('Lisa', 'Rep', 'rep1@travel.com', 'customer_rep'),
-('Chris', 'Rep', 'rep2@travel.com', 'customer_rep');
+INSERT INTO Employee (first_name, last_name, email, role, password) VALUES
+('John', 'Admin', 'admin@travel.com', 'admin', 'admin123'),
+('Lisa', 'Rep', 'rep1@travel.com', 'customer_rep', 'rep123'),
+('Chris', 'Rep', 'rep2@travel.com', 'customer_rep', 'rep123');
 
 INSERT INTO Flight
-(airline_id, departure_airport, arrival_airport, departure_time, arrival_time)
+(airline_id, departure_airport, arrival_airport, departure_time, arrival_time, base_price)
 VALUES
-('AA', 'EWR', 'JFK', '2026-05-01 10:00:00', '2026-05-01 11:00:00'),
-('UA', 'JFK', 'EWR', '2026-05-02 14:00:00', '2026-05-02 15:00:00'),
-('AA', 'EWR', 'JFK', '2026-05-03 09:00:00', '2026-05-03 10:00:00'),
-('UA', 'EWR', 'JFK', '2026-05-04 16:30:00', '2026-05-04 17:30:00'),
-('AA', 'JFK', 'LAX', '2026-05-10 08:00:00', '2026-05-10 11:30:00'),
-('UA', 'EWR', 'ORD', '2026-05-11 09:00:00', '2026-05-11 10:45:00'),
-('DL', 'ATL', 'JFK', '2026-05-12 14:00:00', '2026-05-12 16:00:00'),
-('AA', 'LAX', 'ORD', '2026-05-13 12:00:00', '2026-05-13 17:00:00'),
-('UA', 'ORD', 'ATL', '2026-05-14 18:00:00', '2026-05-14 20:15:00'),
-('DL', 'JFK', 'EWR', '2026-05-15 07:00:00', '2026-05-15 08:00:00');
+('AA', 'EWR', 'JFK', '2026-05-01 10:00:00', '2026-05-01 11:00:00', 120.00),
+('UA', 'JFK', 'EWR', '2026-05-02 14:00:00', '2026-05-02 15:00:00', 100.00),
+('AA', 'EWR', 'JFK', '2026-05-03 09:00:00', '2026-05-03 10:00:00', 130.00),
+('UA', 'EWR', 'JFK', '2026-05-04 16:30:00', '2026-05-04 17:30:00', 125.00),
+('AA', 'JFK', 'LAX', '2026-05-10 08:00:00', '2026-05-10 11:30:00', 320.00),
+('UA', 'EWR', 'ORD', '2026-05-11 09:00:00', '2026-05-11 10:45:00', 180.00),
+('DL', 'ATL', 'JFK', '2026-05-12 14:00:00', '2026-05-12 16:00:00', 210.00),
+('AA', 'LAX', 'ORD', '2026-05-13 12:00:00', '2026-05-13 17:00:00', 280.00),
+('UA', 'ORD', 'ATL', '2026-05-14 18:00:00', '2026-05-14 20:15:00', 175.00),
+('DL', 'JFK', 'EWR', '2026-05-15 07:00:00', '2026-05-15 08:00:00', 95.00);
 
 INSERT INTO Ticket (customer_id, total_fare, booking_date) VALUES
 (1, 320.00, NOW()),
