@@ -20,6 +20,25 @@ public class TicketDAO {
             e.printStackTrace();
         }
     }
+    public static void addTicketFlight(int ticketId, int flightId, String ticketType, String ticketStatus, double price) {
+        String query = "INSERT INTO Ticket_Flight (ticket_id, flight_id, ticket_type, ticket_status, price) VALUES (?, ?, ?, ?, ?)";
+    
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+    
+            ps.setInt(1, ticketId);
+            ps.setInt(2, flightId);
+            ps.setString(3, ticketType);
+            ps.setString(4, ticketStatus);
+            ps.setDouble(5, price);
+    
+            ps.executeUpdate();
+            System.out.println("Ticket flight added successfully.");
+    
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static void linkTicketToFlight(int ticketId, int flightId) {
         String query = "INSERT INTO Ticket_Flight (ticket_id, flight_id) VALUES (?, ?)";
