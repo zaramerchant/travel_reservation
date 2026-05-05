@@ -7,7 +7,7 @@ public class FlightDAO {
 
     public static void addFlight(String airlineId, String departureAirport, String arrivalAirport,
                                  String departureTime, String arrivalTime) {
-        String query = "INSERT INTO Flight (airline_id, departure_airport, arrival_airport, departure_time, arrival_time) VALUES (?, ?, ?, ?, ?)";
+        String query = "SELECT * FROM Flight WHERE departure_airport = ? AND arrival_airport = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(query)) {
