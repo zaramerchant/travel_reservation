@@ -271,19 +271,229 @@ public class MainUI extends JFrame {
     }
 
     private void searchFlights() {
-        String dep = JOptionPane.showInputDialog(this, "Departure airport code, example JFK:");
-        String arr = JOptionPane.showInputDialog(this, "Arrival airport code, example LAX:");
-        String date = JOptionPane.showInputDialog(this, "Date YYYY-MM-DD, or leave blank for any date:");
+        JPanel panel = new JPanel(new GridLayout(12, 2, 10, 10));
 
-        if (date == null || date.trim().isEmpty()) {
-            runPreparedSelect("SELECT * FROM Flight WHERE departure_airport = ? AND arrival_airport = ?", dep, arr);
-        } else {
-            runPreparedSelect("""
-                    SELECT * FROM Flight
-                    WHERE departure_airport = ?
-                    AND arrival_airport = ?
-                    AND DATE(departure_time) = ?
-                    """, dep, arr, date);
+        JTextField depField = new JTextField("JFK");
+        JTextField arrField = new JTextField("LAX");
+        JTextField departDateField = new JTextField("2026-05-10");
+        JTextField returnDateField = new JTextField("2026-05-17");
+
+        JComboBox<String> tripTypeBox = new JComboBox<>(new String[]{
+                "One-Way",
+                "Round-Trip"
+        });
+
+        JCheckBox flexibleBox = new JCheckBox("+/- 3 days");
+
+        JComboBox<String> sortBox = new JComboBox<>(new String[]{
+                "None",
+                "Price",
+                "Take-off Time",
+                "Landing Time",
+                "Duration"
+        });
+
+        JTextField airlineField = new JTextField();
+        JTextField maxPriceField = new JTextField();
+        JTextField maxStopsField = new JTextField();
+        JTextField earliestTakeoffField = new JTextField();
+        JTextField latestLandingField = new JTextField();
+
+        panel.add(new JLabel("Departure Airport:"));
+        panel.add(depField);
+
+        panel.add(new JLabel("Arrival Airport:"));
+        panel.add(arrField);
+
+        panel.add(new JLabel("Departure Date YYYY-MM-DD:"));
+        panel.add(departDateField);
+
+        panel.add(new JLabel("Return Date YYYY-MM-DD:"));
+        panel.add(returnDateField);
+
+        panel.add(new JLabel("Trip Type:"));
+        panel.add(tripTypeBox);
+
+        panel.add(new JLabel("Flexible Dates:"));
+        panel.add(flexibleBox);
+
+        panel.add(new JLabel("Sort By:"));
+        panel.add(sortBox);
+
+        panel.add(new JLabel("Airline Filter, optional:"));
+        panel.add(airlineField);
+
+        panel.add(new JLabel("Max Price, optional:"));
+        panel.add(maxPriceField);
+
+        panel.add(new JLabel("Max Stops, optional:"));
+        panel.add(maxStopsField);
+
+        panel.add(new JLabel("Earliest Takeoff HH:MM:SS, optional:"));
+        panel.add(earliestTakeoffField);
+
+        panel.add(new JLabel("Latest Landing HH:MM:SS, optional:"));
+        panel.add(latestLandingField);
+
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                panel,
+                "Search Flights",
+                JOptionPane.OK_CANCEL_OPTION
+        );
+
+        if (result != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        String dep = depField.getText().trim();
+        String arr = arrField.getText().trim();
+        String departDate = departDateField.getText().trim();
+        String returnDate = returnDateField.getText().trim();
+        String tripType = (String) tripTypeBox.getSelectedItem();
+        boolean flexible = flexibleBox.isSelected();
+        String sortBy = (String) sortBox.getSelectedItem();
+
+        showFlightSearchResults(
+                dep,
+                arr,
+                departDate,
+                flexible,
+                sortBy,
+                airlineField.getText().trim(),
+                maxPriceField.getText().trim(),
+                maxStopsField.getText().trim(),
+                earliestTakeoffField.getText().trim(),
+                latestLandingField.getText().trim(),
+                "Outbound Flights"
+        );
+
+        if ("Round-Trip".equals(tripType)) {
+            JOptionPane.showMessageDialog(this, "Now showing return flights.");
+
+            showFlightSearchResults(
+                    arr,
+                    dep,
+                    returnDate,
+                    flexible,
+                    sortBy,
+                    airlineField.getText().trim(),
+                    maxPriceField.getText().trim(),
+                    maxStopsField.getText().trim(),
+                    earliestTakeoffField.getText().trim(),
+                    latestLandingField.getText().trim(),
+                    "Return Flights"
+            );
+        }
+    }
+
+    private void showFlightSearchResults(
+            String dep,
+            String arr,
+            String date,
+            boolean flexible,
+            String sortBy,
+            String airline,
+            String maxPrice,
+            String maxStops,
+            String earliestTakeoff,
+            String latestLanding,
+            String label
+    ) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT flight_id, airline_id, departure_airport, arrival_airport,
+                       departure_time, arrival_time, base_price, available_seats,
+                       number_of_stops,
+                       TIMESTAMPDIFF(MINUTE, departure_time, arrival_time) AS duration_minutes
+                FROM Flight
+                WHERE departure_airport = ?
+                AND arrival_airport = ?
+                """);
+
+        boolean hasDate = date != null && !date.trim().isEmpty();
+
+        if (hasDate) {
+            if (flexible) {
+                sql.append(" AND DATE(departure_time) BETWEEN DATE_SUB(?, INTERVAL 3 DAY) AND DATE_ADD(?, INTERVAL 3 DAY) ");
+            } else {
+                sql.append(" AND DATE(departure_time) = ? ");
+            }
+        }
+
+        if (!airline.isEmpty()) {
+            sql.append(" AND airline_id = ? ");
+        }
+
+        if (!maxPrice.isEmpty()) {
+            sql.append(" AND base_price <= ? ");
+        }
+
+        if (!maxStops.isEmpty()) {
+            sql.append(" AND number_of_stops <= ? ");
+        }
+
+        if (!earliestTakeoff.isEmpty()) {
+            sql.append(" AND TIME(departure_time) >= ? ");
+        }
+
+        if (!latestLanding.isEmpty()) {
+            sql.append(" AND TIME(arrival_time) <= ? ");
+        }
+
+        if ("Price".equals(sortBy)) {
+            sql.append(" ORDER BY base_price ASC ");
+        } else if ("Take-off Time".equals(sortBy)) {
+            sql.append(" ORDER BY departure_time ASC ");
+        } else if ("Landing Time".equals(sortBy)) {
+            sql.append(" ORDER BY arrival_time ASC ");
+        } else if ("Duration".equals(sortBy)) {
+            sql.append(" ORDER BY duration_minutes ASC ");
+        }
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+
+            int index = 1;
+
+            ps.setString(index++, dep);
+            ps.setString(index++, arr);
+
+            if (hasDate) {
+                if (flexible) {
+                    ps.setString(index++, date);
+                    ps.setString(index++, date);
+                } else {
+                    ps.setString(index++, date);
+                }
+            }
+
+            if (!airline.isEmpty()) {
+                ps.setString(index++, airline);
+            }
+
+            if (!maxPrice.isEmpty()) {
+                ps.setDouble(index++, Double.parseDouble(maxPrice));
+            }
+
+            if (!maxStops.isEmpty()) {
+                ps.setInt(index++, Integer.parseInt(maxStops));
+            }
+
+            if (!earliestTakeoff.isEmpty()) {
+                ps.setString(index++, earliestTakeoff);
+            }
+
+            if (!latestLanding.isEmpty()) {
+                ps.setString(index++, latestLanding);
+            }
+
+            ResultSet rs = ps.executeQuery();
+            fillTable(rs);
+
+            JOptionPane.showMessageDialog(this, label + " loaded.");
+
+        } catch (Exception ex) {
+            showError(ex);
         }
     }
 
@@ -291,28 +501,45 @@ public class MainUI extends JFrame {
         try {
             int flightId = Integer.parseInt(JOptionPane.showInputDialog(this, "Flight ID:"));
             String type = JOptionPane.showInputDialog(this, "Ticket class: economy, business, or first");
-    
+
             double basePrice = 0.0;
-    
+            int availableSeats = 0;
+
             try (Connection conn = DBConnection.getConnection()) {
                 conn.setAutoCommit(false);
-    
-                PreparedStatement pricePs = conn.prepareStatement(
-                        "SELECT base_price FROM Flight WHERE flight_id = ?"
+
+                PreparedStatement flightPs = conn.prepareStatement(
+                        "SELECT base_price, available_seats FROM Flight WHERE flight_id = ?"
                 );
-                pricePs.setInt(1, flightId);
-    
-                ResultSet priceRs = pricePs.executeQuery();
-    
-                if (priceRs.next()) {
-                    basePrice = priceRs.getDouble("base_price");
+                flightPs.setInt(1, flightId);
+
+                ResultSet flightRs = flightPs.executeQuery();
+
+                if (flightRs.next()) {
+                    basePrice = flightRs.getDouble("base_price");
+                    availableSeats = flightRs.getInt("available_seats");
                 } else {
                     JOptionPane.showMessageDialog(this, "Flight not found.");
+                    conn.rollback();
                     return;
                 }
-    
+
+                if (availableSeats <= 0) {
+                    PreparedStatement waitPs = conn.prepareStatement(
+                            "INSERT INTO Waiting_List (customer_id, flight_id, request_time, notified) VALUES (?, ?, NOW(), 0)"
+                    );
+                    waitPs.setInt(1, customerId);
+                    waitPs.setInt(2, flightId);
+                    waitPs.executeUpdate();
+
+                    conn.commit();
+
+                    JOptionPane.showMessageDialog(this, "Flight is full. You were added to the waiting list.");
+                    return;
+                }
+
                 double finalPrice;
-    
+
                 if (type.equalsIgnoreCase("business")) {
                     finalPrice = basePrice * 1.5;
                 } else if (type.equalsIgnoreCase("first")) {
@@ -321,41 +548,47 @@ public class MainUI extends JFrame {
                     finalPrice = basePrice;
                     type = "economy";
                 }
-    
+
                 PreparedStatement ticketPs = conn.prepareStatement(
                         "INSERT INTO Ticket (customer_id, total_fare, booking_date) VALUES (?, ?, NOW())",
                         Statement.RETURN_GENERATED_KEYS
                 );
-    
+
                 ticketPs.setInt(1, customerId);
                 ticketPs.setDouble(2, finalPrice);
                 ticketPs.executeUpdate();
-    
+
                 ResultSet keys = ticketPs.getGeneratedKeys();
                 int ticketId = -1;
-    
+
                 if (keys.next()) {
                     ticketId = keys.getInt(1);
                 }
-    
+
                 PreparedStatement tfPs = conn.prepareStatement(
                         "INSERT INTO Ticket_Flight (ticket_id, flight_id, ticket_type, ticket_status, price) VALUES (?, ?, ?, 'confirmed', ?)"
                 );
-    
+
                 tfPs.setInt(1, ticketId);
                 tfPs.setInt(2, flightId);
                 tfPs.setString(3, type.toLowerCase());
                 tfPs.setDouble(4, finalPrice);
                 tfPs.executeUpdate();
-    
+
+                PreparedStatement seatPs = conn.prepareStatement(
+                        "UPDATE Flight SET available_seats = available_seats - 1 WHERE flight_id = ?"
+                );
+                seatPs.setInt(1, flightId);
+                seatPs.executeUpdate();
+
                 conn.commit();
-    
+
                 JOptionPane.showMessageDialog(this,
                         "Ticket booked successfully.\nFinal price: $" + finalPrice);
-    
+
                 viewReservations(customerId);
             }
-    
+
         } catch (Exception ex) {
             showError(ex);
         }
@@ -533,15 +766,20 @@ public class MainUI extends JFrame {
 
     private void addFlight() {
         String airline = JOptionPane.showInputDialog(this, "Airline ID:");
+        int aircraftId = Integer.parseInt(JOptionPane.showInputDialog(this, "Aircraft ID:"));
         String dep = JOptionPane.showInputDialog(this, "Departure airport:");
         String arr = JOptionPane.showInputDialog(this, "Arrival airport:");
         String depTime = JOptionPane.showInputDialog(this, "Departure time YYYY-MM-DD HH:MM:SS:");
         String arrTime = JOptionPane.showInputDialog(this, "Arrival time YYYY-MM-DD HH:MM:SS:");
+        double price = Double.parseDouble(JOptionPane.showInputDialog(this, "Base price:"));
+        int seats = Integer.parseInt(JOptionPane.showInputDialog(this, "Available seats:"));
+        int stops = Integer.parseInt(JOptionPane.showInputDialog(this, "Number of stops:"));
 
         runPreparedUpdate("""
-                INSERT INTO Flight (airline_id, departure_airport, arrival_airport, departure_time, arrival_time)
-                VALUES (?, ?, ?, ?, ?)
-                """, airline, dep, arr, depTime, arrTime);
+                INSERT INTO Flight
+                (airline_id, aircraft_id, departure_airport, arrival_airport, departure_time, arrival_time, base_price, available_seats, number_of_stops)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, airline, aircraftId, dep, arr, depTime, arrTime, price, seats, stops);
 
         runSelect("SELECT * FROM Flight");
     }
