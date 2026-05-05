@@ -24,7 +24,7 @@ public class EmployeeDAO {
             e.printStackTrace();
         }
     }
-    }
+    
 
     public static void getAllEmployees() {
         String query = "SELECT * FROM Employee";

@@ -6,24 +6,28 @@ import java.sql.*;
 public class FlightDAO {
 
     public static void addFlight(String airlineId, String departureAirport, String arrivalAirport,
-                                 String departureTime, String arrivalTime) {
-        String query = "SELECT * FROM Flight WHERE departure_airport = ? AND arrival_airport = ?";
+                             String departureTime, String arrivalTime) {
+    String query = """
+            INSERT INTO Flight (airline_id, departure_airport, arrival_airport, departure_time, arrival_time)
+            VALUES (?, ?, ?, ?, ?)
+            """;
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(query)) {
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(query)) {
 
-            ps.setString(1, airlineId);
-            ps.setString(2, departureAirport);
-            ps.setString(3, arrivalAirport);
-            ps.setString(4, departureTime);
-            ps.setString(5, arrivalTime);
-            ps.executeUpdate();
-            System.out.println("Flight added successfully.");
+        ps.setString(1, airlineId);
+        ps.setString(2, departureAirport);
+        ps.setString(3, arrivalAirport);
+        ps.setString(4, departureTime);
+        ps.setString(5, arrivalTime);
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        ps.executeUpdate();
+        System.out.println("Flight added successfully.");
+
+    } catch (Exception e) {
+        e.printStackTrace();
     }
+}
 
     public static void getAllFlights() {
         String query = "SELECT * FROM Flight";
