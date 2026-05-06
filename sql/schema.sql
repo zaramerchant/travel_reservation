@@ -116,13 +116,13 @@ INSERT INTO Aircraft (airline_id, model, total_seats) VALUES
 
 INSERT INTO Customer (first_name, last_name, email, password) VALUES
 ('Sara', 'Shareef', 'sara@gmail.com', 'pass123'),
-('Amogh', 'Kim', 'alex@gmail.com', 'pass123'),
-('Maya', 'Patel', 'maya@gmail.com', 'pass123'),
-('Jordan', 'Lee', 'jordan@gmail.com', 'pass123'),
-('Nina', 'Brown', 'nina@gmail.com', 'pass123');
+('Amogh', 'Daksh', 'amogh@gmail.com', 'pass123'),
+('Zara', 'Merchant', 'zara@gmail.com', 'pass123'),
+('Sher', 'Weng', 'sher@gmail.com', 'pass123'),
+('Bianca', 'Vargas', 'bianca@gmail.com', 'pass123');
 
 INSERT INTO Employee (first_name, last_name, email, role, password) VALUES
-('John', 'Admin', 'admin@travel.com', 'admin', 'admin123'),
+('Suhani', 'Admin', 'admin@travel.com', 'admin', 'admin123'),
 ('Lisa', 'Rep', 'rep1@travel.com', 'customer_rep', 'rep123'),
 ('Chris', 'Rep', 'rep2@travel.com', 'customer_rep', 'rep123');
 
