@@ -609,26 +609,142 @@ public class MainUI extends JFrame {
     }
 
     private void joinWaitingList(int customerId) {
-        int flightId = Integer.parseInt(JOptionPane.showInputDialog(this, "Flight ID:"));
-        runPreparedUpdate("INSERT INTO Waiting_List (customer_id, flight_id, request_time, notified) VALUES (?, ?, NOW(), 0)",
-                customerId, flightId);
-        JOptionPane.showMessageDialog(this, "Added to waiting list.");
-        runSelect("SELECT * FROM Waiting_List");
+    int flightId = Integer.parseInt(JOptionPane.showInputDialog(this, "Flight ID:"));
+
+    try (Connection conn = DBConnection.getConnection()) {
+
+        PreparedStatement checkPs = conn.prepareStatement("""
+                SELECT *
+                FROM Waiting_List
+                WHERE customer_id = ?
+                AND flight_id = ?
+                """);
+
+        checkPs.setInt(1, customerId);
+        checkPs.setInt(2, flightId);
+
+        ResultSet checkRs = checkPs.executeQuery();
+
+        if (checkRs.next()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "You are already on the waiting list for flight " + flightId + "."
+            );
+        } else {
+            PreparedStatement insertPs = conn.prepareStatement("""
+                    INSERT INTO Waiting_List (customer_id, flight_id, request_time, notified)
+                    VALUES (?, ?, NOW(), 0)
+                    """);
+
+            insertPs.setInt(1, customerId);
+            insertPs.setInt(2, flightId);
+            insertPs.executeUpdate();
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Added to waiting list for flight " + flightId + "."
+            );
+        }
+
+        PreparedStatement listPs = conn.prepareStatement("""
+                SELECT w.waitlist_id, c.first_name, c.last_name,
+                       w.customer_id, w.flight_id, w.request_time, w.notified
+                FROM Waiting_List w
+                JOIN Customer c ON w.customer_id = c.customer_id
+                WHERE w.flight_id = ?
+                ORDER BY w.request_time
+                """);
+
+        listPs.setInt(1, flightId);
+
+        ResultSet listRs = listPs.executeQuery();
+        fillTable(listRs);
+
+    } catch (Exception ex) {
+        showError(ex);
     }
+}
 
     private void cancelReservation() {
-        int ticketId = Integer.parseInt(JOptionPane.showInputDialog(this, "Ticket ID:"));
+    int ticketId = Integer.parseInt(JOptionPane.showInputDialog(this, "Enter Ticket ID to cancel:"));
 
-        runPreparedUpdate("""
+    try (Connection conn = DBConnection.getConnection()) {
+        conn.setAutoCommit(false);
+
+        PreparedStatement checkPs = conn.prepareStatement("""
+                SELECT tf.ticket_id, tf.flight_id, tf.ticket_type, tf.ticket_status
+                FROM Ticket_Flight tf
+                JOIN Ticket t ON tf.ticket_id = t.ticket_id
+                WHERE tf.ticket_id = ?
+                AND t.customer_id = ?
+                """);
+
+        checkPs.setInt(1, ticketId);
+        checkPs.setInt(2, currentUserId);
+
+        ResultSet rs = checkPs.executeQuery();
+
+        if (!rs.next()) {
+            JOptionPane.showMessageDialog(this, "Ticket not found for your account.");
+            conn.rollback();
+            return;
+        }
+
+        String ticketType = rs.getString("ticket_type");
+        String status = rs.getString("ticket_status");
+        int flightId = rs.getInt("flight_id");
+
+        if (!ticketType.equalsIgnoreCase("business") && !ticketType.equalsIgnoreCase("first")) {
+            JOptionPane.showMessageDialog(this, "Only business or first class tickets can be cancelled.");
+            conn.rollback();
+            return;
+        }
+
+        if (status.equalsIgnoreCase("cancelled")) {
+            JOptionPane.showMessageDialog(this, "This ticket is already cancelled.");
+            conn.rollback();
+            return;
+        }
+
+        PreparedStatement cancelPs = conn.prepareStatement("""
                 UPDATE Ticket_Flight
                 SET ticket_status = 'cancelled'
                 WHERE ticket_id = ?
-                AND ticket_type IN ('business', 'first')
-                """, ticketId);
+                """);
 
-        JOptionPane.showMessageDialog(this, "Cancelled if ticket was business or first class.");
+        cancelPs.setInt(1, ticketId);
+        cancelPs.executeUpdate();
+
+        PreparedStatement seatPs = conn.prepareStatement("""
+                UPDATE Flight
+                SET available_seats = available_seats + 1
+                WHERE flight_id = ?
+                """);
+
+        seatPs.setInt(1, flightId);
+        seatPs.executeUpdate();
+
+        PreparedStatement notifyPs = conn.prepareStatement("""
+                UPDATE Waiting_List
+                SET notified = 1
+                WHERE flight_id = ?
+                AND notified = 0
+                ORDER BY request_time
+                LIMIT 1
+                """);
+
+        notifyPs.setInt(1, flightId);
+        notifyPs.executeUpdate();
+
+        conn.commit();
+
+        JOptionPane.showMessageDialog(this, "Reservation cancelled. One waiting-list customer was notified if available.");
         viewReservations(currentUserId);
+
+    } catch (Exception ex) {
+        showError(ex);
     }
+}
 
     private void postQuestion(int customerId) {
         String question = JOptionPane.showInputDialog(this, "Enter your question:");
