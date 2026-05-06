@@ -6,6 +6,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainUI extends JFrame {
 
@@ -47,14 +49,24 @@ public class MainUI extends JFrame {
         panel.add(repLogin);
 
         customerLogin.addActionListener(e ->
-                loginCustomer(emailField.getText(), new String(passwordField.getPassword())));
-
-        adminLogin.addActionListener(e ->
-                loginEmployee(emailField.getText(), new String(passwordField.getPassword()), "admin"));
-
-        repLogin.addActionListener(e ->
-                loginEmployee(emailField.getText(), new String(passwordField.getPassword()), "customer_rep"));
-
+            loginCustomer(
+                    emailField.getText().trim(),
+                    new String(passwordField.getPassword()).trim()
+            ));
+    
+    adminLogin.addActionListener(e ->
+            loginEmployee(
+                    emailField.getText().trim(),
+                    new String(passwordField.getPassword()).trim(),
+                    "admin"
+            ));
+    
+    repLogin.addActionListener(e ->
+            loginEmployee(
+                    emailField.getText().trim(),
+                    new String(passwordField.getPassword()).trim(),
+                    "customer_rep"
+            ));
         add(panel);
         revalidate();
         repaint();
@@ -183,52 +195,64 @@ public class MainUI extends JFrame {
     }
 
     private JPanel adminPanel() {
-        JPanel panel = new JPanel(new GridLayout(6, 2, 10, 10));
-
+        JPanel panel = new JPanel(new GridLayout(8, 2, 10, 10));
+    
         JButton viewCustomers = new JButton("View Customers");
         JButton viewEmployees = new JButton("View Representatives");
         JButton addCustomer = new JButton("Add Customer");
+        JButton editCustomer = new JButton("Edit Customer");
         JButton deleteCustomer = new JButton("Delete Customer");
         JButton addRep = new JButton("Add Representative");
+        JButton editRep = new JButton("Edit Representative");
         JButton deleteRep = new JButton("Delete Representative");
         JButton monthlySales = new JButton("Monthly Sales Report");
         JButton reservationsByFlight = new JButton("Reservations by Flight");
         JButton reservationsByCustomer = new JButton("Reservations by Customer");
+        JButton revenueByFlight = new JButton("Revenue by Flight");
         JButton revenueByAirline = new JButton("Revenue by Airline");
+        JButton revenueByCustomer = new JButton("Revenue by Customer");
         JButton topCustomer = new JButton("Top Customer by Revenue");
         JButton activeFlights = new JButton("Most Active Flights");
-
+    
         viewCustomers.addActionListener(e -> runSelect("SELECT * FROM Customer"));
         viewEmployees.addActionListener(e -> runSelect("SELECT * FROM Employee WHERE role = 'customer_rep'"));
         addCustomer.addActionListener(e -> addCustomer());
+        editCustomer.addActionListener(e -> editCustomer());
         deleteCustomer.addActionListener(e -> deleteCustomer());
         addRep.addActionListener(e -> addRepresentative());
+        editRep.addActionListener(e -> editRepresentative());
         deleteRep.addActionListener(e -> deleteRepresentative());
         monthlySales.addActionListener(e -> monthlySalesReport());
         reservationsByFlight.addActionListener(e -> reservationsByFlight());
         reservationsByCustomer.addActionListener(e -> reservationsByCustomer());
+        revenueByFlight.addActionListener(e -> revenueByFlight());
         revenueByAirline.addActionListener(e -> revenueByAirline());
+        revenueByCustomer.addActionListener(e -> revenueByCustomer());
         topCustomer.addActionListener(e -> topCustomerByRevenue());
         activeFlights.addActionListener(e -> mostActiveFlights());
-
+    
         panel.add(viewCustomers);
         panel.add(viewEmployees);
         panel.add(addCustomer);
+        panel.add(editCustomer);
         panel.add(deleteCustomer);
         panel.add(addRep);
+        panel.add(editRep);
         panel.add(deleteRep);
         panel.add(monthlySales);
         panel.add(reservationsByFlight);
         panel.add(reservationsByCustomer);
+        panel.add(revenueByFlight);
         panel.add(revenueByAirline);
+        panel.add(revenueByCustomer);
         panel.add(topCustomer);
         panel.add(activeFlights);
-
+    
         return panel;
     }
 
     private JPanel representativePanel() {
-        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
+        JPanel panel = new JPanel(new GridLayout(8, 2, 10, 10));
 
         JButton makeReservation = new JButton("Make Reservation for Customer");
         JButton editReservation = new JButton("Edit Reservation Status");
@@ -240,11 +264,14 @@ public class MainUI extends JFrame {
         JButton flightsByAirport = new JButton("Flights by Airport");
         JButton viewQuestions = new JButton("View Questions");
         JButton replyQuestion = new JButton("Reply to Question");
+        JButton editFlight = new JButton("Edit Flight");
+        JButton editAirport = new JButton("Edit Airport");
+        JButton deleteAirport = new JButton("Delete Airport");
+        JButton editAircraft = new JButton("Edit Aircraft");
+        JButton deleteAircraft = new JButton("Delete Aircraft");
+        
 
-        makeReservation.addActionListener(e -> {
-            int customerId = Integer.parseInt(JOptionPane.showInputDialog(this, "Customer ID:"));
-            bookTicket(customerId);
-        });
+        makeReservation.addActionListener(e -> makeReservationForCustomer());
 
         editReservation.addActionListener(e -> editReservationStatus());
         addFlight.addActionListener(e -> addFlight());
@@ -255,6 +282,11 @@ public class MainUI extends JFrame {
         flightsByAirport.addActionListener(e -> flightsByAirport());
         viewQuestions.addActionListener(e -> runSelect("SELECT * FROM Question"));
         replyQuestion.addActionListener(e -> replyToQuestion());
+        editFlight.addActionListener(e -> editFlight());
+        editAirport.addActionListener(e -> editAirport());
+        deleteAirport.addActionListener(e -> deleteAirport());
+        editAircraft.addActionListener(e -> editAircraft());
+        deleteAircraft.addActionListener(e -> deleteAircraft());
 
         panel.add(makeReservation);
         panel.add(editReservation);
@@ -266,9 +298,189 @@ public class MainUI extends JFrame {
         panel.add(flightsByAirport);
         panel.add(viewQuestions);
         panel.add(replyQuestion);
+        panel.add(editFlight);
+        panel.add(editAirport);
+        panel.add(deleteAirport);
+        panel.add(editAircraft);
+        panel.add(deleteAircraft);
 
         return panel;
     }
+    private void makeReservationForCustomer() {
+        String email = JOptionPane.showInputDialog(this, "Customer email:");
+        if (email == null || email.trim().isEmpty()) return;
+        email = email.trim();
+        
+        int flightId = Integer.parseInt(
+                JOptionPane.showInputDialog(this, "Flight ID:")
+        );
+    
+        String ticketType = JOptionPane.showInputDialog(
+                this,
+                "Ticket type (economy/business/first):"
+        );
+    
+        try (Connection conn = DBConnection.getConnection()) {
+    
+            PreparedStatement findCustomer = conn.prepareStatement(
+                "SELECT customer_id FROM Customer WHERE LOWER(TRIM(email)) = LOWER(TRIM(?))"
+        );
+        findCustomer.setString(1, email.trim());
+    
+            ResultSet customerRS = findCustomer.executeQuery();
+    
+            if (!customerRS.next()) {
+                JOptionPane.showMessageDialog(this, "Customer not found.");
+                return;
+            }
+    
+            int customerId = customerRS.getInt("customer_id");
+    
+            PreparedStatement flightPS = conn.prepareStatement(
+                    "SELECT available_seats, base_price FROM Flight WHERE flight_id = ?"
+            );
+            flightPS.setInt(1, flightId);
+    
+            ResultSet flightRS = flightPS.executeQuery();
+    
+            if (!flightRS.next()) {
+                JOptionPane.showMessageDialog(this, "Flight not found.");
+                return;
+            }
+    
+            int seats = flightRS.getInt("available_seats");
+            double price = flightRS.getDouble("base_price");
+    
+            // full -> waitlist
+            if (seats <= 0) {
+                PreparedStatement wait = conn.prepareStatement(
+                        "INSERT INTO Waiting_List(customer_id, flight_id, request_time) VALUES (?, ?, NOW())"
+                );
+                wait.setInt(1, customerId);
+                wait.setInt(2, flightId);
+                wait.executeUpdate();
+    
+                JOptionPane.showMessageDialog(this,
+                        "Flight full. Added to waiting list.");
+                return;
+            }
+    
+            // create ticket
+            PreparedStatement ticketPS = conn.prepareStatement(
+                    "INSERT INTO Ticket(customer_id, total_fare, booking_date) VALUES (?, ?, NOW())",
+                    Statement.RETURN_GENERATED_KEYS
+            );
+            ticketPS.setInt(1, customerId);
+            ticketPS.setDouble(2, price);
+            ticketPS.executeUpdate();
+    
+            ResultSet keys = ticketPS.getGeneratedKeys();
+            keys.next();
+            int ticketId = keys.getInt(1);
+    
+            PreparedStatement tf = conn.prepareStatement(
+                    "INSERT INTO Ticket_Flight(ticket_id, flight_id, ticket_type, ticket_status, price) VALUES (?, ?, ?, 'confirmed', ?)"
+            );
+            tf.setInt(1, ticketId);
+            tf.setInt(2, flightId);
+            tf.setString(3, ticketType);
+            tf.setDouble(4, price);
+            tf.executeUpdate();
+    
+            PreparedStatement seatUpdate = conn.prepareStatement(
+                    "UPDATE Flight SET available_seats = available_seats - 1 WHERE flight_id = ?"
+            );
+            seatUpdate.setInt(1, flightId);
+            seatUpdate.executeUpdate();
+    
+            JOptionPane.showMessageDialog(this, "Reservation created.");
+    
+            runSelect("SELECT * FROM Ticket_Flight");
+    
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage());
+        }
+    }
+    private void editFlight() {
+        int id = Integer.parseInt(JOptionPane.showInputDialog(this, "Flight ID to edit:"));
+        String airline = JOptionPane.showInputDialog(this, "New airline ID:");
+        String dep = JOptionPane.showInputDialog(this, "New departure airport:");
+        String arr = JOptionPane.showInputDialog(this, "New arrival airport:");
+        String depTime = JOptionPane.showInputDialog(this, "New departure time YYYY-MM-DD HH:MM:SS:");
+        String arrTime = JOptionPane.showInputDialog(this, "New arrival time YYYY-MM-DD HH:MM:SS:");
+        double price = Double.parseDouble(JOptionPane.showInputDialog(this, "New base price:"));
+        int seats = Integer.parseInt(JOptionPane.showInputDialog(this, "New available seats:"));
+        int stops = Integer.parseInt(JOptionPane.showInputDialog(this, "New number of stops:"));
+    
+        runPreparedUpdate("""
+            UPDATE Flight
+            SET airline_id = ?, departure_airport = ?, arrival_airport = ?,
+                departure_time = ?, arrival_time = ?, base_price = ?,
+                available_seats = ?, number_of_stops = ?
+            WHERE flight_id = ?
+            """, airline, dep, arr, depTime, arrTime, price, seats, stops, id);
+    
+        runSelect("SELECT * FROM Flight");
+    }
+    private void editAirport() {
+        String id = JOptionPane.showInputDialog(this, "Airport ID to edit:");
+        String name = JOptionPane.showInputDialog(this, "New airport name:");
+        String city = JOptionPane.showInputDialog(this, "New city:");
+    
+        runPreparedUpdate("""
+            UPDATE Airport
+            SET name = ?, city = ?
+            WHERE airport_id = ?
+            """, name, city, id);
+    
+        runSelect("SELECT * FROM Airport");
+    }
+    private void deleteAirport() {
+        String id = JOptionPane.showInputDialog(this, "Airport ID to delete:");
+    
+        runPreparedUpdate("DELETE FROM Airport WHERE airport_id = ?", id);
+    
+        runSelect("SELECT * FROM Airport");
+    }
+    private void editAircraft() {
+        int id = Integer.parseInt(JOptionPane.showInputDialog(this, "Aircraft ID to edit:"));
+        String airline = JOptionPane.showInputDialog(this, "New airline ID:");
+        String model = JOptionPane.showInputDialog(this, "New model:");
+        int seats = Integer.parseInt(JOptionPane.showInputDialog(this, "New total seats:"));
+    
+        runPreparedUpdate("""
+            UPDATE Aircraft
+            SET airline_id = ?, model = ?, total_seats = ?
+            WHERE aircraft_id = ?
+            """, airline, model, seats, id);
+    
+        runSelect("SELECT * FROM Aircraft");
+    }
+    private void deleteAircraft() {
+        int id = Integer.parseInt(JOptionPane.showInputDialog(this, "Aircraft ID to delete:"));
+    
+        runPreparedUpdate("DELETE FROM Aircraft WHERE aircraft_id = ?", id);
+    
+        runSelect("SELECT * FROM Aircraft");
+    }
+
+    private void editCustomer() {
+        int id = Integer.parseInt(JOptionPane.showInputDialog(this, "Customer ID to edit:"));
+        String first = JOptionPane.showInputDialog(this, "New first name:");
+        String last = JOptionPane.showInputDialog(this, "New last name:");
+        String email = JOptionPane.showInputDialog(this, "New email:");
+        String password = JOptionPane.showInputDialog(this, "New password:");
+    
+        runPreparedUpdate("""
+                UPDATE Customer
+                SET first_name = ?, last_name = ?, email = ?, password = ?
+                WHERE customer_id = ?
+                """, first, last, email, password, id);
+    
+        runSelect("SELECT * FROM Customer");
+    }
+
+
 
     private void searchFlights() {
         JPanel panel = new JPanel(new GridLayout(12, 2, 10, 10));
@@ -594,6 +806,7 @@ public class MainUI extends JFrame {
         }
     }
 
+    
     private void viewReservations(int customerId) {
         runPreparedSelect("""
                 SELECT c.first_name, c.last_name, t.ticket_id, f.flight_id,
@@ -858,6 +1071,33 @@ public class MainUI extends JFrame {
                 """);
     }
 
+    private void revenueByFlight() {
+        int flightId = Integer.parseInt(JOptionPane.showInputDialog(this, "Flight ID:"));
+    
+        runPreparedSelect("""
+                SELECT f.flight_id, f.airline_id, f.departure_airport, f.arrival_airport,
+                       SUM(tf.price) AS revenue
+                FROM Flight f
+                JOIN Ticket_Flight tf ON f.flight_id = tf.flight_id
+                WHERE f.flight_id = ?
+                GROUP BY f.flight_id, f.airline_id, f.departure_airport, f.arrival_airport
+                """, flightId);
+    }
+
+    private void revenueByCustomer() {
+        int customerId = Integer.parseInt(JOptionPane.showInputDialog(this, "Customer ID:"));
+    
+        runPreparedSelect("""
+                SELECT c.customer_id, c.first_name, c.last_name,
+                       SUM(tf.price) AS revenue
+                FROM Customer c
+                JOIN Ticket t ON c.customer_id = t.customer_id
+                JOIN Ticket_Flight tf ON t.ticket_id = tf.ticket_id
+                WHERE c.customer_id = ?
+                GROUP BY c.customer_id, c.first_name, c.last_name
+                """, customerId);
+    }
+
     private void topCustomerByRevenue() {
         runSelect("""
                 SELECT c.customer_id, c.first_name, c.last_name, SUM(tf.price) AS total_revenue
@@ -945,18 +1185,116 @@ public class MainUI extends JFrame {
                 """, airport, airport);
     }
 
-    private void replyToQuestion() {
-        int questionId = Integer.parseInt(JOptionPane.showInputDialog(this, "Question ID:"));
-        String reply = JOptionPane.showInputDialog(this, "Reply:");
+   private void replyToQuestion() {
+    try (Connection conn = DBConnection.getConnection()) {
 
-        runPreparedUpdate("""
-                UPDATE Question
-                SET employee_id = ?, reply_text = ?, reply_time = NOW()
-                WHERE question_id = ?
-                """, currentUserId, reply, questionId);
+        // show unanswered questions
+        String sql = """
+            SELECT q.question_id,
+                   c.first_name,
+                   c.last_name,
+                   q.question_text
+            FROM Question q
+            JOIN Customer c ON q.customer_id = c.customer_id
+            WHERE q.reply_text IS NULL
+            ORDER BY q.question_time
+        """;
+
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery();
+
+        StringBuilder choices = new StringBuilder();
+        Map<Integer,String> questions = new HashMap<>();
+
+        while (rs.next()) {
+            int id = rs.getInt("question_id");
+            String customer =
+                    rs.getString("first_name") + " " +
+                    rs.getString("last_name");
+            String question = rs.getString("question_text");
+
+            questions.put(id, question);
+
+            choices.append("ID ")
+                   .append(id)
+                   .append(" — ")
+                   .append(customer)
+                   .append(": ")
+                   .append(question)
+                   .append("\n\n");
+        }
+
+        if (questions.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No unanswered questions.");
+            return;
+        }
+
+        // show all questions first
+        JTextArea area = new JTextArea(choices.toString());
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setEditable(false);
+
+        JScrollPane pane = new JScrollPane(area);
+        pane.setPreferredSize(new Dimension(500,300));
+
+        JOptionPane.showMessageDialog(
+                this,
+                pane,
+                "Unanswered Questions",
+                JOptionPane.INFORMATION_MESSAGE
+        );
+
+        // choose ID
+        int questionId = Integer.parseInt(
+                JOptionPane.showInputDialog(
+                        this,
+                        "Enter Question ID to reply to:"
+                )
+        );
+
+        String selectedQuestion = questions.get(questionId);
+
+        if (selectedQuestion == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Invalid Question ID");
+            return;
+        }
+
+        // show chosen question clearly
+        String reply = JOptionPane.showInputDialog(
+                this,
+                "Question:\n\n" + selectedQuestion +
+                "\n\nType reply:"
+        );
+
+        if (reply == null || reply.isBlank()) return;
+
+        // save reply
+        PreparedStatement update = conn.prepareStatement("""
+            UPDATE Question
+            SET employee_id = ?,
+                reply_text = ?,
+                reply_time = NOW()
+            WHERE question_id = ?
+        """);
+
+        update.setInt(1, currentUserId);
+        update.setString(2, reply);
+        update.setInt(3, questionId);
+        update.executeUpdate();
+
+        JOptionPane.showMessageDialog(this,
+                "Reply saved.");
 
         runSelect("SELECT * FROM Question");
+
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this,
+                e.getMessage());
     }
+}
 
     private void editReservationStatus() {
         int ticketId = Integer.parseInt(JOptionPane.showInputDialog(this, "Ticket ID:"));
@@ -974,6 +1312,21 @@ public class MainUI extends JFrame {
         } catch (Exception ex) {
             showError(ex);
         }
+    }
+    private void editRepresentative() {
+        int id = Integer.parseInt(JOptionPane.showInputDialog(this, "Representative ID to edit:"));
+        String first = JOptionPane.showInputDialog(this, "New first name:");
+        String last = JOptionPane.showInputDialog(this, "New last name:");
+        String email = JOptionPane.showInputDialog(this, "New email:");
+        String password = JOptionPane.showInputDialog(this, "New password:");
+    
+        runPreparedUpdate("""
+                UPDATE Employee
+                SET first_name = ?, last_name = ?, email = ?, password = ?
+                WHERE employee_id = ? AND role = 'customer_rep'
+                """, first, last, email, password, id);
+    
+        runSelect("SELECT * FROM Employee WHERE role = 'customer_rep'");
     }
 
     private void runPreparedSelect(String sql, Object... values) {
